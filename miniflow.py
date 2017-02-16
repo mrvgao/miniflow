@@ -1,0 +1,117 @@
+class Node(object):
+    def __init__(self, inbound_nodes=[]):
+        self.inbound_nodes = inbound_nodes
+        self.outbound_nodes = []
+
+        for n in self.inbound_nodes:
+            n.outbound_nodes.append(self)
+            # set 'self' node as inbound_nodes's outbound_nodes
+
+        self.value = None
+        
+
+    def forward(self):
+        '''
+        Forward propagation. 
+
+        Compute the output value vased on 'inbound_nodes' and store the 
+        result in self.value
+        '''
+
+        raise NotImplemented
+
+
+class Input(Node):
+    def __init__(self):
+        '''
+        An Input node has no inbound nodes.
+        So no need to pass anything to the Node instantiator.
+        '''
+        Node.__init__(self)
+
+
+    def forward(self, value=None):
+        '''
+        Only input node is the node where the value may be passed
+        as an argument to forward().
+
+
+        All other node implementations should get the value of the 
+        previous node from self.inbound_nodes
+        
+        Example: 
+
+        val0: self.inbound_nodes[0].value
+        '''
+        if value is not None:
+            self.value = value
+            ## It's is input node, when need to forward, this node initiate self's value.
+
+
+        # Input subclass just holds a value, such as a data feature or a model parameter(weight/bias)
+
+
+class Add(Node):
+    def __init__(self, *nodes):
+        Node.__init__(self, nodes)
+
+
+    def forward(self):
+        self.value = sum(map(lambda n: n.value, self.inbound_nodes))
+        ## when execute forward, this node caculate value as defined.
+
+
+def forward_pass(output_node, sorted_nodes):
+    # execute all the forward method of sorted_nodes.
+    for n in sorted_nodes:
+        n.forward()
+        ## each node execute forward, get self.value based on the topological sort result.
+
+    return output_node.value
+
+
+def topological_sort(feed_dict):
+    """
+    Sort generic nodes in topological order using Kahn's Algorithm.
+
+    `feed_dict`: A dictionary where the key is a `Input` node and the value is the respective value feed to that node.
+
+    Returns a list of sorted nodes.
+    """
+
+    input_nodes = [n for n in feed_dict.keys()]
+
+    G = {}
+    nodes = [n for n in input_nodes]
+    while len(nodes) > 0:
+        n = nodes.pop(0)
+        if n not in G:
+            G[n] = {'in': set(), 'out': set()}
+        for m in n.outbound_nodes:
+            if m not in G:
+                G[m] = {'in': set(), 'out': set()}
+            G[n]['out'].add(m)
+            G[m]['in'].add(n)
+            nodes.append(m)
+
+    L = []
+    S = set(input_nodes)
+    while len(S) > 0:
+        n = S.pop()
+
+        if isinstance(n, Input):
+            n.value = feed_dict[n]
+            ## if n is Input Node, set n'value as 
+            ## feed_dict[n]
+            ## else, n's value is caculate as its
+            ## inbounds
+
+        L.append(n)
+        for m in n.outbound_nodes:
+            G[n]['out'].remove(m)
+            G[m]['in'].remove(n)
+            # if no other incoming edges add to S
+            if len(G[m]['in']) == 0:
+                S.add(m)
+    return L
+
