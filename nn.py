@@ -59,3 +59,51 @@ graph = topological_sort(feed_dict)
 output = forward_pass(f, graph)
 
 print(output) # should be 12.7 with this example
+
+
+## Test for maxtics manipulation.
+
+import numpy as np
+
+X, W, b = Input(), Input(), Input()
+# build the nodes
+
+f = Linear(X, W, b)
+# define the graph operation.
+# which is linear node.
+
+X_ = np.array([
+    [-1., -2.], 
+    [-1, -2]])
+W_ = np.array([
+    [2., -3.], 
+    [2., -3]])
+b_ = np.array([-3., -5])
+
+feed_dict = {X: X_, W:W_, b:b_}
+
+graph = topological_sort(feed_dict)
+output = forward_pass(f, graph)
+
+print(output)
+
+target = np.array([
+    [-9., 4.],
+    [-9., 4.]
+    ])
+assert(np.array_equal(output,target))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Node(object):
     def __init__(self, inbound_nodes=[]):
         self.inbound_nodes = inbound_nodes
@@ -88,11 +91,18 @@ class Linear(Node):
         Node.__init__(self, [nodes, weights, bias])
 
     def forward(self):
-        self.value = sum([n * w for n, w in zip(self.inbound_nodes[0].value, self.inbound_nodes[1].value)]) + self.inbound_nodes[2].value
+        inbound_nodes = self.inbound_nodes[0].value
+        weights = self.inbound_nodes[1].value
+        bias = self.inbound_nodes[2].value
+
+        self.value = np.dot(inbound_nodes, weights) + bias
+        #self.value = sum([n * w for n, w in zip(self.inbound_nodes[0].value, self.inbound_nodes[1].value)]) + self.inbound_nodes[2].value
 
 
 def forward_pass(output_node, sorted_nodes):
     # execute all the forward method of sorted_nodes.
+
+    ## In practice, it's common to feed in mutiple data example in each forward pass rather than just 1. Because the examples can be processed in parallel. The number of examples is called batch size.
     for n in sorted_nodes:
         n.forward()
         ## each node execute forward, get self.value based on the topological sort result.
