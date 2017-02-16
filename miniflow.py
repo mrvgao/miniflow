@@ -51,6 +51,15 @@ class Input(Node):
         # Input subclass just holds a value, such as a data feature or a model parameter(weight/bias)
 
 
+class CaculatNode(Node):
+    def __init__(self, f, *nodes):
+        Node.__init__(self, nodes)
+        self.func = f
+
+    def forward(self):
+        self.value = self.func(map(lambda n: n.value, self.inbound_nodes))
+
+
 class Add(Node):
     def __init__(self, *nodes):
         Node.__init__(self, nodes)
@@ -59,6 +68,27 @@ class Add(Node):
     def forward(self):
         self.value = sum(map(lambda n: n.value, self.inbound_nodes))
         ## when execute forward, this node caculate value as defined.
+
+
+
+class LinearNode(Node):
+    def __init__(self, nodes, weights, bias=0):
+        Node.__init__(self, nodes)
+        self.weights = weights
+        self.bias = bias
+        
+
+    def forward(self):
+        self.value = sum([n.value * w for n, w in zip(self.inbound_nodes, self.weights)])  + self.bias
+
+
+
+class Linear(Node):
+    def __init__(self, nodes, weights, bias):
+        Node.__init__(self, [nodes, weights, bias])
+
+    def forward(self):
+        self.value = sum([n * w for n, w in zip(self.inbound_nodes[0].value, self.inbound_nodes[1].value)]) + self.inbound_nodes[2].value
 
 
 def forward_pass(output_node, sorted_nodes):
