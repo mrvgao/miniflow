@@ -124,7 +124,8 @@ class MSE(Node):
 
         m = y.shape[0]
 
-        self.value = sum([(y_i[0] - a_i[0])**2 for y_i, a_i in zip(y, a)])/m
+        diff = y - a
+        self.value = np.mean(diff**2)
 
 
 def forward_pass(output_node, sorted_nodes):

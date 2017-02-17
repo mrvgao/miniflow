@@ -140,8 +140,11 @@ graph = topological_sort(feed_dict)
 
 forward_pass(cost, graph)
 
+# Summary: define a node, which could caculate the cost alue.
+
 
 ## test
+
 np.testing.assert_array_almost_equal(output, target, decimal=8)
 
 np.testing.assert_almost_equal(cost.value, 23.4166666667)
