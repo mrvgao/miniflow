@@ -99,6 +99,34 @@ class Linear(Node):
         #self.value = sum([n * w for n, w in zip(self.inbound_nodes[0].value, self.inbound_nodes[1].value)]) + self.inbound_nodes[2].value
 
 
+class Sigmoid(Node):
+    def __init__(self, node):
+        Node.__init__(self, [node])
+
+
+    def _sigmoid(self, x):
+        return 1./(1 + np.exp(-1 * x))
+
+    def forward(self):
+        x = self.inbound_nodes[0].value
+        self.value = self._sigmoid(x)
+
+
+class MSE(Node):
+    def __init__(self, y, a):
+        Node.__init__(self, [y, a])
+
+
+    def forward(self):
+        y = self.inbound_nodes[0].value.reshape(-1, 1)
+        a = self.inbound_nodes[1].value.reshape(-1, 1)
+        assert(y.shape == a.shape)
+
+        m = y.shape[0]
+
+        self.value = sum([(y_i[0] - a_i[0])**2 for y_i, a_i in zip(y, a)])/m
+
+
 def forward_pass(output_node, sorted_nodes):
     # execute all the forward method of sorted_nodes.
 
