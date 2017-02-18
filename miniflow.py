@@ -238,3 +238,7 @@ def topological_sort(feed_dict):
                 S.add(m)
     return L
 
+
+def sgd_update(trainables, learning_rate=1e-2):
+    for t in trainables:
+        t.value -= learning_rate * t.gradients[t]
