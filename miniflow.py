@@ -11,6 +11,12 @@ class Node(object):
             # set 'self' node as inbound_nodes's outbound_nodes
 
         self.value = None
+
+        self.gradients = {}
+        # keys are the inputs to this node, and their
+        # values are the partials of this node with 
+        # respect to that input.
+        # \partial{node}{input_i}
         
 
     def forward(self):
@@ -22,6 +28,11 @@ class Node(object):
         '''
 
         raise NotImplemented
+    
+
+    def backward(self):
+
+        raise NotImplemented
 
 
 class Input(Node):
@@ -31,6 +42,7 @@ class Input(Node):
         So no need to pass anything to the Node instantiator.
         '''
         Node.__init__(self)
+
 
 
     def forward(self, value=None):
@@ -52,6 +64,13 @@ class Input(Node):
 
 
         # Input subclass just holds a value, such as a data feature or a model parameter(weight/bias)
+        
+    def backward(self):
+        self.gradients = {self:0}
+        for n in self.outbound_nodes:
+            grad_cost = n.gradients[self]
+            self.gradients[self] += grad_cost * 1
+
 
 
 class CaculatNode(Node):
@@ -85,7 +104,7 @@ class LinearNode(Node):
         self.value = sum([n.value * w for n, w in zip(self.inbound_nodes, self.weights)])  + self.bias
 
 
-
+   
 class Linear(Node):
     def __init__(self, nodes, weights, bias):
         Node.__init__(self, [nodes, weights, bias])
@@ -98,6 +117,21 @@ class Linear(Node):
         self.value = np.dot(inbound_nodes, weights) + bias
         #self.value = sum([n * w for n, w in zip(self.inbound_nodes[0].value, self.inbound_nodes[1].value)]) + self.inbound_nodes[2].value
 
+   
+    def backward(self):
+
+        # initial a partial for each of the inbound_nodes.
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        for n in self.outbound_nodes:
+            # Get the partial of the cost w.r.t this node.
+            grad_cost = n.gradients[self]
+
+            self.gradients[self.inbound_nodes[0]] += np.dot(grad_cost, self.inbound_nodes[1].value.T)
+            self.gradients[self.inbound_nodes[1]] += np.dot(self.inbound_nodes[0].value.T, grad_cost)
+            self.gradients[self.inbound_nodes[2]] += np.sum(grad_cost, axis=0, keepdims=False)
+
+
 
 class Sigmoid(Node):
     def __init__(self, node):
@@ -108,8 +142,20 @@ class Sigmoid(Node):
         return 1./(1 + np.exp(-1 * x))
 
     def forward(self):
-        x = self.inbound_nodes[0].value
-        self.value = self._sigmoid(x)
+        self.x = self.inbound_nodes[0].value
+        self.value = self._sigmoid(self.x)
+
+    def backward(self):
+        self.partial = self._sigmoid(self.x) * (1 - self._sigmoid(self.x))
+        
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        for n in self.outbound_nodes:
+            grad_cost = n.gradients[self]  # Get the partial of the cost with respect to this node.
+
+            self.gradients[self.inbound_nodes[0]] += grad_cost * self.partial
+            # use * to keep all the dimension same!.
+
 
 
 class MSE(Node):
@@ -122,21 +168,29 @@ class MSE(Node):
         a = self.inbound_nodes[1].value.reshape(-1, 1)
         assert(y.shape == a.shape)
 
-        m = y.shape[0]
+        self.m = self.inbound_nodes[0].value.shape[0]
+        self.diff = y - a
 
-        diff = y - a
-        self.value = np.mean(diff**2)
+        self.value = np.mean(self.diff**2)
 
 
-def forward_pass(output_node, sorted_nodes):
+    def backward(self):
+        self.gradients[self.inbound_nodes[0]] = (2 / self.m) * self.diff
+        self.gradients[self.inbound_nodes[1]] = (-2 / self.m) * self.diff
+
+
+def forward_and_backward(outputnode, graph):
     # execute all the forward method of sorted_nodes.
 
     ## In practice, it's common to feed in mutiple data example in each forward pass rather than just 1. Because the examples can be processed in parallel. The number of examples is called batch size.
-    for n in sorted_nodes:
+    for n in graph:
         n.forward()
         ## each node execute forward, get self.value based on the topological sort result.
 
-    return output_node.value
+    for n in  graph[::-1]:
+        n.backward()
+
+    #return outputnode.value
 
 
 def topological_sort(feed_dict):
